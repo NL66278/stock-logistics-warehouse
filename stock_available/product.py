@@ -1,4 +1,5 @@
 #-*- coding: utf-8 -*-
+"""Add immediately_usable_qty computed field to product.template."""
 ##############################################################################
 #
 #    This module is copyright (C) 2014 Numérigraphe SARL. All Rights Reserved.
@@ -17,7 +18,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 from openerp import models, fields, api
 from openerp.addons import decimal_precision as dp
 
@@ -29,29 +29,34 @@ class ProductTemplate(models.Model):
     """
     _inherit = 'product.template'
 
-    # immediately usable quantity caluculated with the quant method
     @api.multi
     @api.depends('virtual_available')
     def _immediately_usable_qty(self):
-        stock_location_obj = self.env['stock.location']
-        internal_locations = stock_location_obj.search([
-            ('usage', '=', 'internal')])
+        """Immediately usable quantity calculated with the quant method."""
+        location_model = self.env['stock.location']
+        product_model = self.env['product.product']
+        quant_model = self.env['stock.quant']
+        internal_locations = location_model.search([
+            ('usage', '=', 'internal')
+        ])
         sublocation_ids = []
         for location in internal_locations:
-            sublocation_ids.append(self.env['stock.location'].search(
-                [('id', 'child_of', location.id)]).ids)
+            sublocation_ids += location_model.search([
+                ('id', 'child_of', location.id),
+                ('id', 'not in', sublocation_ids),
+            ]).ids
         for product_template in self:
-            products = self.env['product.product'].search([
-                ('product_tmpl_id', '=', product_template.id)])
-            quant_obj = self.env['stock.quant']
-            quants = quant_obj.search([
+            product_ids = product_model.search([
+                ('product_tmpl_id', '=', product_template.id),
+            ]).ids
+            quants = quant_model.search([
                 ('location_id', 'in', sublocation_ids),
-                ('product_id', 'in', products.ids),
-                ('reservation_id', '=', False)])
+                ('product_id', 'in', product_ids),
+                ('reservation_id', '=', False),
+            ])
             availability = 0
-            if quants:
-                for quant in quants:
-                    availability += quant.qty
+            for quant in quants:
+                availability += quant.qty
             product_template.immediately_usable_qty = availability
 
     immediately_usable_qty = fields.Float(
@@ -61,6 +66,7 @@ class ProductTemplate(models.Model):
         help="Stock for this Product that can be safely proposed "
              "for sale to Customers.\n"
              "The definition of this value can be configured to suit "
-             "your needs , this number is obtained by using the new odoo 8 "
-             "quants, so it gives us the actual current quants  minus reserved"
-             "quants")
+             "your needs. This number is obtained by using the new odoo 8 "
+             "quants, so it gives us the actual current quants minus reserved"
+             "quants."
+    )

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    This module is copyright (C) 2014 Numérigraphe SARL. All Rights Reserved.
+#    Copyright (C) 2015 Therp BV.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -17,5 +17,4 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from . import product
-from . import res_config
+from . import test_stock_available
